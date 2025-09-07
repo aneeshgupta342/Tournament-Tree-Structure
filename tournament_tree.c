@@ -1,167 +1,144 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct node {
-    struct node* next;
-    struct node* down;
-    int skill1;
-    int skill2;
-} node;
+typedef struct Node {
+    struct Node* next;
+    struct Node* down;
+    int p1Skill;
+    int p2Skill;
+} Node;
 
 int max(int a, int b) {
     return a > b ? a : b;
 }
 
-node* createNode(int skill1, int skill2) {
-    node* head = (node*)malloc(sizeof(node));
-    head->next = NULL;
-    head->down = NULL;
-    head->skill1 = skill1;
-    head->skill2 = skill2;
-    return head;
+Node* createNode(int p1Skill, int p2Skill) {
+    Node* node = (Node*)malloc(sizeof(Node));
+    node->next = NULL;
+    node->down = NULL;
+    node->p1Skill = p1Skill;
+    node->p2Skill = p2Skill;
+    return node;
 }
 
-node* create_level(node* head) {
-    node* new_head = NULL;
-    node* prev = NULL;
-    node* temp = head;
+Node* createNextRound(Node* currentRound) {
+    Node* nextRoundHead = NULL;
+    Node* previousMatch = NULL;
+    Node* currentMatch = currentRound;
 
-    while (temp != NULL) {
-        node* temp2 = NULL;
+    while (currentMatch != NULL) {
+        Node* newMatch = NULL;
 
-      
-        if (temp->next == NULL) {
-            temp2 = createNode(max(temp->skill1, temp->skill2), -1e7);  
+        if (currentMatch->next == NULL) {
+            newMatch = createNode(max(currentMatch->p1Skill, currentMatch->p2Skill), -1000000000);
         } else {
-           
-            int max1 = max(temp->skill1, temp->skill2);
-            int max2 = max(temp->next->skill1, temp->next->skill2);
-            temp2 = createNode(max1, max2);
+            int w1 = max(currentMatch->p1Skill, currentMatch->p2Skill);
+            int w2 = max(currentMatch->next->p1Skill, currentMatch->next->p2Skill);
+            newMatch = createNode(w1, w2);
         }
 
-       
-        temp->down = temp2;
-        if (temp->next) {
-            temp->next->down = temp2;
+        currentMatch->down = newMatch;
+        if (currentMatch->next) {
+            currentMatch->next->down = newMatch;
         }
 
-        
-        if (prev) {
-            prev->next = temp2;
+        if (previousMatch) {
+            previousMatch->next = newMatch;
         }
+        previousMatch = newMatch;
 
-        prev = temp2;
+        currentMatch = currentMatch->next ? currentMatch->next->next : NULL;
 
-        
-        temp = temp->next ? temp->next->next : NULL;
-
-        if (new_head == NULL) {
-            new_head = temp2;
+        if (nextRoundHead == NULL) {
+            nextRoundHead = newMatch;
         }
     }
 
-    return new_head;
+    return nextRoundHead;
 }
 
-node* create_first_level(int n, int skill[]) {
-    node* prev = NULL;
-    node* head = NULL;
+Node* createFirstRound(int totalPlayers, int skills[]) {
+    Node* head = NULL;
+    Node* previousMatch = NULL;
 
-    for (int i = 0; i < n; i += 2) {
-        node* temp = NULL;
+    for (int i = 0; i < totalPlayers; i += 2) {
+        Node* match = NULL;
 
-        if (i == n - 1) {
-            
-            temp = createNode(skill[i], -1e7);  
+        if (i == totalPlayers - 1) {
+            match = createNode(skills[i], -1000000000);
         } else {
-            temp = createNode(skill[i], skill[i + 1]);
+            match = createNode(skills[i], skills[i + 1]);
         }
 
-        if (prev) {
-            prev->next = temp;
+        if (previousMatch) {
+            previousMatch->next = match;
         }
 
         if (i == 0) {
-            head = temp;
+            head = match;
         }
 
-        prev = temp;
+        previousMatch = match;
     }
 
     return head;
 }
 
-void simulate_helper(node* level) {
-    if (level == NULL || level->next == NULL) {
+void simulateTournamentRounds(Node* round) {
+    if (round == NULL || round->next == NULL) {
         return;
     }
 
-    node* next_level = create_level(level);
-    simulate_helper(next_level);
+    Node* nextRound = createNextRound(round);
+    simulateTournamentRounds(nextRound);
 }
 
-int simulate_tournament(int n, int skill[]) {
-    node* start = create_first_level(n, skill);
-    simulate_helper(start);
-    
-    node *temp= start;
-    while(temp->down != NULL)
-    temp = temp->down;
-    
-    print_tree(start);
-    return max(temp->skill1, temp->skill2);
-    
-}
+int simulateTournament(int totalPlayers, int skills[]) {
+    Node* firstRound = createFirstRound(totalPlayers, skills);
+    simulateTournamentRounds(firstRound);
 
-void print_tree(node * start)
-{
-  int count =1;
-  while(start)
-  {
-    printf("Round %d:\n", count);
-    int count2 = 1;
-    node *temp = start;
-    while(temp != NULL)
-    {
-      int d1 = temp->skill1;
-      int d2 = temp->skill2;
-      printf("M%d = ", count2);
-      count2++;
-      if(d1 != -1e7)
-      printf("%d ", d1);
-      if(d2 != -1e7)
-      printf("%d ", d2);
-      
-      temp = temp->next;
+    Node* finalMatch = firstRound;
+    while (finalMatch->down != NULL) {
+        finalMatch = finalMatch->down;
     }
-    start = start->down;
-    count++;
-    printf("\n");
-    
-  }
+
+    printTournamentRounds(firstRound);
+    return max(finalMatch->p1Skill, finalMatch->p2Skill);
 }
 
-
-
+void printTournamentRounds(Node* round) {
+    int roundNumber = 1;
+    while (round) {
+        printf("Round %d:\n", roundNumber);
+        Node* match = round;
+        int matchNumber = 1;
+        while (match != NULL) {
+            printf("Match %d = ", matchNumber);
+            if (match->p1Skill != -1000000000)
+                printf("%d ", match->p1Skill);
+            if (match->p2Skill != -1000000000)
+                printf("%d ", match->p2Skill);
+            printf("\n");
+            match = match->next;
+            matchNumber++;
+        }
+        printf("\n");
+        round = round->down;
+        roundNumber++;
+    }
+}
 
 int main() {
-    int n;
-    scanf("%d", &n);
-    int skill[n];
+    int totalPlayers;
+    scanf("%d", &totalPlayers);
+    int skills[totalPlayers];
 
-    for (int i = 0; i < n; i++) {
-        scanf("%d", &skill[i]);
+    for (int i = 0; i < totalPlayers; i++) {
+        scanf("%d", &skills[i]);
     }
 
-    int winner = simulate_tournament(n, skill);
-    printf("Winner(skill level) = %d\n", winner);
-    
-    
-
-    
-    
-   
-    
+    int winnerSkill = simulateTournament(totalPlayers, skills);
+    printf("Winner(skill level) = %d\n", winnerSkill);
 
     return 0;
 }
